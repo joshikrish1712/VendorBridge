@@ -46,6 +46,32 @@ export const InvoiceDetails: React.FC = () => {
   const [invoice, setInvoice] = useState<InvoiceDetailsType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [downloadLoading, setDownloadLoading] = useState(false);
+
+  const handleDownloadPDF = async () => {
+    if (!invoice) return;
+    setDownloadLoading(true);
+    setError("");
+    try {
+      const response = await api.get(`/purchase-orders/pdf/invoice/${invoice.invoiceNumber}`, {
+        responseType: "blob",
+      });
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `invoice_${invoice.invoiceNumber}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode?.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err: any) {
+      console.error("Error downloading Invoice PDF:", err);
+      setError("Failed to download Invoice PDF.");
+    } finally {
+      setDownloadLoading(false);
+    }
+  };
 
   useEffect(() => {
     const fetchInvoiceDetails = async () => {
@@ -113,15 +139,14 @@ export const InvoiceDetails: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <a
-            href={`http://localhost:5000/api/purchase-orders/pdf/invoice/${invoice.invoiceNumber}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-semibold px-3.5 py-2 rounded transition inline-flex items-center gap-1.5 shadow-sm"
+          <button
+            onClick={handleDownloadPDF}
+            disabled={downloadLoading}
+            className="bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-semibold px-3.5 py-2 rounded transition inline-flex items-center gap-1.5 shadow-sm disabled:opacity-50"
           >
             <Download className="w-4 h-4" />
-            <span>Download Invoice PDF</span>
-          </a>
+            <span>{downloadLoading ? "Downloading..." : "Download Invoice PDF"}</span>
+          </button>
           <Link
             to={`/purchase-orders/${poData.id}`}
             className="bg-white hover:bg-slate-50 text-text-primary text-xs font-semibold px-3.5 py-2 rounded border border-border-default transition inline-flex items-center gap-1.5"

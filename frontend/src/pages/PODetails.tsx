@@ -66,6 +66,32 @@ export const PODetails: React.FC = () => {
   // Manager Approval States
   const [remarks, setRemarks] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
+  const [downloadLoading, setDownloadLoading] = useState(false);
+
+  const handleDownloadPDF = async () => {
+    if (!po) return;
+    setDownloadLoading(true);
+    setError("");
+    try {
+      const response = await api.get(`/purchase-orders/pdf/po/${po.poNumber}`, {
+        responseType: "blob",
+      });
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `po_${po.poNumber}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode?.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err: any) {
+      console.error("Error downloading PO PDF:", err);
+      setError("Failed to download Purchase Order PDF.");
+    } finally {
+      setDownloadLoading(false);
+    }
+  };
 
   const fetchPODetails = async () => {
     try {
@@ -153,15 +179,14 @@ export const PODetails: React.FC = () => {
 
         <div className="flex flex-wrap gap-2">
           {po.status === "APPROVED" && (
-            <a
-              href={`http://localhost:5000/api/purchase-orders/pdf/po/${po.poNumber}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-semibold px-3.5 py-2 rounded transition inline-flex items-center gap-1.5 shadow-sm"
+            <button
+              onClick={handleDownloadPDF}
+              disabled={downloadLoading}
+              className="bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-semibold px-3.5 py-2 rounded transition inline-flex items-center gap-1.5 shadow-sm disabled:opacity-50"
             >
               <Download className="w-4 h-4" />
-              <span>Download PO PDF</span>
-            </a>
+              <span>{downloadLoading ? "Downloading..." : "Download PO PDF"}</span>
+            </button>
           )}
           {po.invoice && (
             <Link
